@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#00d4aa">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="VoiceStudio">
+<title>VoiceOver Studio</title>
+<link rel="manifest" href="/manifest.json">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#08080d;--bg2:#0f0f18;--bg3:#16161f;--bg4:#1c1c28;
+  --border:rgba(255,255,255,0.06);--border2:rgba(255,255,255,0.1);
+  --acc:#00d4aa;--acc2:#00f5c4;--acc-dim:rgba(0,212,170,0.12);--acc-glow:rgba(0,212,170,0.2);
+  --text:#eeeef5;--text2:#8888a4;--text3:#44445a;
+  --red:#ff6b6b;--yellow:#ffd93d;--purple:#c084fc;
+  --safe-top:env(safe-area-inset-top,0px);
+  --safe-bottom:env(safe-area-inset-bottom,0px);
+}
+html,body{height:100%;overflow:hidden;}
+body{font-family:'Inter',sans-serif;background:var(--bg);color:var(--text);display:flex;flex-direction:column;}
+
+/* Top bar */
+.topbar{
+  background:var(--bg2);
+  border-bottom:1px solid var(--border);
+  padding:calc(var(--safe-top) + 12px) 16px 12px;
+  display:flex;align-items:center;justify-content:space-between;
+  flex-shrink:0;
+}
+.logo{display:flex;align-items:center;gap:8px;}
+.logo-icon{width:32px;height:32px;background:linear-gradient(135deg,var(--acc),#00a8ff);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;}
+.logo-text{font-size:16px;font-weight:700;letter-spacing:-0.3px;}
+.logo-text span{color:var(--acc);}
+.badge{background:var(--acc-dim);border:1px solid rgba(0,212,170,0.25);border-radius:20px;padding:3px 10px;font-size:11px;font-weight:600;color:var(--acc);}
+
+/* Tabs */
+.tabs{display:flex;background:var(--bg2);border-bottom:1px solid var(--border);flex-shrink:0;}
+.tab{flex:1;padding:10px;text-align:center;font-size:12px;font-weight:500;color:var(--text3);cursor:pointer;border-bottom:2px solid transparent;transition:all 0.2s;}
+.tab.active{color:var(--acc);border-bottom-color:var(--acc);}
+
+/* Scroll area */
+.scroll{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;}
+.scroll::-webkit-scrollbar{display:none;}
+
+/* Pages */
+.page{display:none;padding:16px;padding-bottom:calc(var(--safe-bottom) + 80px);}
+.page.active{display:block;}
+
+/* Cards */
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:12px;margin-bottom:12px;overflow:hidden;}
+.card-header{padding:12px 14px 0;display:flex;align-items:center;justify-content:space-between;}
+.card-title{font-size:11px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text3);}
+.card-body{padding:12px 14px 14px;}
+
+/* Textarea */
+textarea{
+  width:100%;min-height:160px;padding:12px;
+  background:var(--bg3);border:1px solid var(--border2);border-radius:8px;
+  color:var(--text);font-family:'Inter',sans-serif;font-size:14px;line-height:1.7;
+  resize:none;transition:border-color 0.2s;
+}
+textarea::placeholder{color:var(--text3);}
+textarea:focus{outline:none;border-color:var(--acc);}
+.char-row{display:flex;justify-content:space-between;margin-top:6px;font-size:11px;color:var(--text3);}
+.char-badge{background:var(--bg4);border:1px solid var(--border2);border-radius:4px;padding:1px 6px;color:var(--text2);}
+.char-badge.over{color:var(--red);}
+.char-badge.near{color:var(--yellow);}
+
+/* Generate button */
+.gen-btn{
+  width:100%;padding:14px;margin-top:12px;
+  background:linear-gradient(135deg,var(--acc),#00a8ff);
+  border:none;border-radius:10px;color:#000;
+  font-family:'Inter',sans-serif;font-size:15px;font-weight:700;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;
+  transition:all 0.2s;box-shadow:0 4px 16px var(--acc-glow);
+  -webkit-tap-highlight-color:transparent;
+}
+.gen-btn:active{transform:scale(0.98);}
+.gen-btn:disabled{opacity:0.4;cursor:not-allowed;}
+
+/* Status */
+.status{
+  margin-top:10px;padding:10px 14px;border-radius:8px;
+  background:var(--bg3);border:1px solid var(--border);
+  font-size:13px;color:var(--text2);
+  display:flex;align-items:center;gap:8px;min-height:42px;transition:all 0.3s;
+}
+.status.generating{border-color:rgba(0,212,170,0.3);color:var(--acc);background:rgba(0,212,170,0.07);}
+.status.success{border-color:rgba(0,212,170,0.3);color:var(--acc);background:rgba(0,212,170,0.07);}
+.status.error{border-color:rgba(255,107,107,0.3);color:var(--red);background:rgba(255,107,107,0.07);}
+
+/* Progress */
+.prog-wrap{display:none;margin-top:8px;}
+.prog-wrap.show{display:block;}
+.prog-bg{height:3px;background:var(--border);border-radius:2px;overflow:hidden;}
+.prog-fill{height:100%;background:linear-gradient(90deg,var(--acc),#00a8ff);width:0;transition:width 0.4s;}
+
+/* Download card */
+.dl-card{display:none;margin-top:10px;padding:14px;background:rgba(0,212,170,0.07);border:1px solid rgba(0,212,170,0.2);border-radius:10px;}
+.dl-card.show{display:block;}
+.dl-top{display:flex;align-items:center;gap:10px;}
+.dl-icon{font-size:24px;}
+.dl-info{flex:1;}
+.dl-name{font-size:13px;font-weight:600;color:var(--acc);}
+.dl-size{font-size:11px;color:var(--text3);margin-top:2px;}
+.dl-btn{padding:8px 14px;background:var(--acc);border:none;border-radius:7px;color:#000;font-family:'Inter',sans-serif;font-weight:700;font-size:13px;cursor:pointer;text-decoration:none;display:flex;align-items:center;gap:5px;white-space:nowrap;}
+audio{width:100%;margin-top:10px;border-radius:6px;}
+
+/* Voice filter */
+select{
+  width:100%;background:var(--bg3);border:1px solid var(--border2);border-radius:8px;
+  color:var(--text);font-family:'Inter',sans-serif;font-size:13px;padding:9px 12px;
+  cursor:pointer;appearance:none;
+  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'%3E%3Cpath fill='%2344445a' d='M5 7L0 2h10z'/%3E%3C/svg%3E");
+  background-repeat:no-repeat;background-position:right 10px center;padding-right:28px;
+}
+select:focus{outline:none;border-color:var(--acc);}
+
+/* Voice grid */
+.voice-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px;}
+.vc{background:var(--bg3);border:1px solid var(--border);border-radius:9px;padding:10px;cursor:pointer;transition:all 0.15s;-webkit-tap-highlight-color:transparent;}
+.vc:active{transform:scale(0.97);}
+.vc.sel{border-color:var(--acc);background:var(--acc-dim);}
+.vc-name{font-size:13px;font-weight:600;}
+.vc-style{font-size:10px;color:var(--text3);margin-top:1px;}
+.vc-tag{display:inline-block;font-size:9px;padding:1px 6px;border-radius:20px;margin-top:4px;font-weight:600;}
+.vc-tag.f{background:rgba(192,132,252,0.15);color:var(--purple);}
+.vc-tag.m{background:rgba(0,168,255,0.12);color:#00a8ff;}
+
+/* Sliders */
+.slider-row{display:flex;flex-direction:column;gap:12px;}
+.sl-item{display:flex;flex-direction:column;gap:6px;}
+.sl-top{display:flex;justify-content:space-between;align-items:center;}
+.sl-label{font-size:11px;font-weight:600;letter-spacing:0.5px;text-transform:uppercase;color:var(--text3);}
+.sl-val{font-size:11px;background:var(--bg4);border:1px solid var(--border2);border-radius:4px;padding:1px 7px;color:var(--acc);font-weight:600;}
+input[type=range]{width:100%;height:4px;accent-color:var(--acc);cursor:pointer;}
+
+/* History */
+.hist-item{display:flex;align-items:center;gap:10px;padding:10px 12px;background:var(--bg3);border:1px solid var(--border);border-radius:8px;margin-bottom:8px;}
+.hist-text{flex:1;font-size:12px;color:var(--text2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.hist-dl{color:var(--acc);font-size:16px;text-decoration:none;flex-shrink:0;}
+.empty{text-align:center;padding:24px;color:var(--text3);font-size:13px;}
+
+/* Bottom nav */
+.bottom-nav{
+  position:fixed;bottom:0;left:0;right:0;
+  background:var(--bg2);border-top:1px solid var(--border);
+  display:flex;padding-bottom:var(--safe-bottom);
+  z-index:100;
+}
+.bn-item{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;padding:10px 0;cursor:pointer;color:var(--text3);font-size:10px;font-weight:500;-webkit-tap-highlight-color:transparent;transition:color 0.2s;}
+.bn-item.active{color:var(--acc);}
+.bn-icon{font-size:20px;}
+
+/* Install banner */
+.install-banner{
+  display:none;margin:0 16px 12px;padding:12px 14px;
+  background:rgba(0,212,170,0.08);border:1px solid rgba(0,212,170,0.2);
+  border-radius:10px;display:flex;align-items:center;gap:10px;
+}
+.install-banner.show{display:flex;}
+.install-btn{padding:7px 14px;background:var(--acc);border:none;border-radius:7px;color:#000;font-family:'Inter',sans-serif;font-weight:700;font-size:12px;cursor:pointer;white-space:nowrap;}
+.install-txt{flex:1;font-size:12px;color:var(--text2);}
+.install-close{color:var(--text3);cursor:pointer;font-size:18px;flex-shrink:0;}
+</style>
+</head>
+<body>
+
+<!-- Top bar -->
+<div class="topbar">
+  <div class="logo">
+    <div class="logo-icon">🎙</div>
+    <div class="logo-text">Voice<span>Studio</span></div>
+  </div>
+  <div class="badge">♾️ Unlimited</div>
+</div>
+
+<!-- Tabs -->
+<div class="tabs">
+  <div class="tab active" onclick="switchTab('generate',this)">✨ Generate</div>
+  <div class="tab" onclick="switchTab('voices',this)">🎭 Voices</div>
+  <div class="tab" onclick="switchTab('history',this)">📂 History</div>
+</div>
+
+<!-- Install banner -->
+<div class="install-banner" id="install-banner">
+  <div class="install-txt">📱 Home screen pe install karein — app jaisa experience!</div>
+  <button class="install-btn" onclick="installPWA()">Install</button>
+  <span class="install-close" onclick="document.getElementById('install-banner').classList.remove('show')">×</span>
+</div>
+
+<!-- Scroll area -->
+<div class="scroll">
+
+  <!-- Generate Tab -->
+  <div class="page active" id="page-generate">
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">Your Script</div>
+        <div class="char-badge" id="char-badge">0 / 50,000</div>
+      </div>
+      <div class="card-body">
+        <textarea id="text-input" placeholder="Yahan apna text paste karein...&#10;&#10;English, Urdu, Hindi, Arabic — koi bhi language.&#10;50,000 characters support." oninput="updateChar()"></textarea>
+        <div class="char-row">
+          <span>Long text bhi supported hai</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Selected voice preview -->
+    <div class="card">
+      <div class="card-header"><div class="card-title">Selected Voice</div></div>
+      <div class="card-body">
+        <div style="display:flex;align-items:center;justify-content:space-between;">
+          <div>
+            <div style="font-size:14px;font-weight:600;" id="sel-name">Aria</div>
+            <div style="font-size:12px;color:var(--text3);margin-top:2px;" id="sel-info">English (US) · Female · Conversational</div>
+          </div>
+          <div style="font-size:11px;color:var(--acc);cursor:pointer;" onclick="switchTab('voices',document.querySelectorAll('.tab')[1])">Change →</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Adjustments -->
+    <div class="card">
+      <div class="card-header"><div class="card-title">Adjustments</div></div>
+      <div class="card-body">
+        <div class="slider-row">
+          <div class="sl-item">
+            <div class="sl-top"><span class="sl-label">Speed</span><span class="sl-val" id="rate-val">Normal</span></div>
+            <input type="range" id="rate" min="-50" max="100" step="5" value="0" oninput="updateSliders()">
+          </div>
+          <div class="sl-item">
+            <div class="sl-top"><span class="sl-label">Pitch</span><span class="sl-val" id="pitch-val">Normal</span></div>
+            <input type="range" id="pitch" min="-20" max="20" step="2" value="0" oninput="updateSliders()">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="prog-wrap" id="prog-wrap"><div class="prog-bg"><div class="prog-fill" id="prog-fill"></div></div></div>
+
+    <button class="gen-btn" id="gen-btn" onclick="generate()">
+      <span id="btn-icon">🎙</span><span id="btn-text">Generate Voiceover</span>
+    </button>
+
+    <div class="status" id="status">
+      <span>💬</span><span id="status-text">Voice select karein aur Generate dabayein</span>
+    </div>
+
+    <div class="dl-card" id="dl-card">
+      <div class="dl-top">
+        <div class="dl-icon">🎧</div>
+        <div class="dl-info">
+          <div class="dl-name">voiceover.mp3</div>
+          <div class="dl-size" id="dl-size">Ready</div>
+        </div>
+        <a class="dl-btn" id="dl-link" href="#" download="voiceover.mp3">⬇ Download</a>
+      </div>
+      <audio id="audio-player" controls></audio>
+    </div>
+  </div>
+
+  <!-- Voices Tab -->
+  <div class="page" id="page-voices">
+    <div class="card">
+      <div class="card-header"><div class="card-title">Language Filter</div></div>
+      <div class="card-body">
+        <select id="lang-filter" onchange="filterVoices()">
+          <option value="">All Languages</option>
+          <option value="English (US)">🇺🇸 English — United States</option>
+          <option value="English (UK)">🇬🇧 English — United Kingdom</option>
+          <option value="English (AU)">🇦🇺 English — Australia</option>
+          <option value="Urdu (Pakistan)">🇵🇰 Urdu — Pakistan</option>
+          <option value="Hindi">🇮🇳 Hindi</option>
+          <option value="Arabic">🌙 Arabic</option>
+        </select>
+        <div class="voice-grid" id="voice-grid"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- History Tab -->
+  <div class="page" id="page-history">
+    <div class="card">
+      <div class="card-header"><div class="card-title">Recent Voiceovers</div></div>
+      <div class="card-body">
+        <div id="history-list"><div class="empty">Abhi koi voiceover generate nahi hua</div></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const VOICES = {
+  "English (US)":[
+    {id:"en-US-AriaNeural",name:"Aria",gender:"Female",style:"Conversational"},
+    {id:"en-US-JennyNeural",name:"Jenny",gender:"Female",style:"Friendly"},
+    {id:"en-US-GuyNeural",name:"Guy",gender:"Male",style:"News"},
+    {id:"en-US-AnaNeural",name:"Ana",gender:"Female",style:"Cute"},
+    {id:"en-US-ChristopherNeural",name:"Christopher",gender:"Male",style:"Reliable"},
+    {id:"en-US-EricNeural",name:"Eric",gender:"Male",style:"Rational"},
+    {id:"en-US-MichelleNeural",name:"Michelle",gender:"Female",style:"Friendly"},
+    {id:"en-US-RogerNeural",name:"Roger",gender:"Male",style:"Lively"},
+    {id:"en-US-SteffanNeural",name:"Steffan",gender:"Male",style:"Narrative"},
+  ],
+  "English (UK)":[
+    {id:"en-GB-SoniaNeural",name:"Sonia",gender:"Female",style:"Bright"},
+    {id:"en-GB-RyanNeural",name:"Ryan",gender:"Male",style:"Newscast"},
+    {id:"en-GB-LibbyNeural",name:"Libby",gender:"Female",style:"Friendly"},
+    {id:"en-GB-MaisieNeural",name:"Maisie",gender:"Female",style:"Cheerful"},
+    {id:"en-GB-ThomasNeural",name:"Thomas",gender:"Male",style:"Calm"},
+  ],
+  "English (AU)":[
+    {id:"en-AU-NatashaNeural",name:"Natasha",gender:"Female",style:"Natural"},
+    {id:"en-AU-WilliamNeural",name:"William",gender:"Male",style:"Natural"},
+  ],
+  "Urdu (Pakistan)":[
+    {id:"ur-PK-AsadNeural",name:"Asad",gender:"Male",style:"Natural"},
+    {id:"ur-PK-UzmaNeural",name:"Uzma",gender:"Female",style:"Natural"},
+  ],
+  "Hindi":[
+    {id:"hi-IN-SwaraNeural",name:"Swara",gender:"Female",style:"Natural"},
+    {id:"hi-IN-MadhurNeural",name:"Madhur",gender:"Male",style:"Natural"},
+  ],
+  "Arabic":[
+    {id:"ar-SA-ZariyahNeural",name:"Zariyah",gender:"Female",style:"Saudi"},
+    {id:"ar-SA-HamedNeural",name:"Hamed",gender:"Male",style:"Saudi"},
+    {id:"ar-EG-SalmaNeural",name:"Salma",gender:"Female",style:"Egyptian"},
+    {id:"ar-EG-ShakirNeural",name:"Shakir",gender:"Male",style:"Egyptian"},
+  ],
+};
+
+let selVoice="en-US-AriaNeural";
+let selLang="English (US)";
+let histArr=[];
+let deferredPrompt=null;
+
+// PWA install
+window.addEventListener('beforeinstallprompt',e=>{
+  e.preventDefault();deferredPrompt=e;
+  document.getElementById('install-banner').classList.add('show');
+});
+
+function installPWA(){
+  if(deferredPrompt){deferredPrompt.prompt();deferredPrompt.then(()=>{deferredPrompt=null;document.getElementById('install-banner').classList.remove('show');});}
+}
+
+// Service worker
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('/sw.js').catch(()=>{});
+}
+
+filterVoices();
+updateSliders();
+
+function switchTab(name,el){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('page-'+name).classList.add('active');
+  el.classList.add('active');
+}
+
+function filterVoices(){
+  const filter=document.getElementById('lang-filter').value;
+  const grid=document.getElementById('voice-grid');
+  grid.innerHTML='';
+  const groups=filter?{[filter]:VOICES[filter]||[]}:VOICES;
+  let first=true;
+  Object.entries(groups).forEach(([lang,voices])=>{
+    if(!filter){
+      const lbl=document.createElement('div');
+      lbl.style.cssText='grid-column:1/-1;font-size:10px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--text3);margin-top:'+(first?'0':'8px');
+      lbl.textContent=lang; grid.appendChild(lbl); first=false;
+    }
+    (voices||[]).forEach(v=>{
+      const c=document.createElement('div');
+      c.className='vc'+(v.id===selVoice?' sel':'');
+      c.innerHTML=`<div class="vc-name">${v.name}</div><div class="vc-style">${v.style}</div><span class="vc-tag ${v.gender==='Female'?'f':'m'}">${v.gender}</span>`;
+      c.onclick=()=>{
+        selVoice=v.id; selLang=lang;
+        document.querySelectorAll('.vc').forEach(x=>x.classList.remove('sel'));
+        c.classList.add('sel');
+        document.getElementById('sel-name').textContent=v.name;
+        document.getElementById('sel-info').textContent=lang+' · '+v.gender+' · '+v.style;
+        switchTab('generate',document.querySelectorAll('.tab')[0]);
+      };
+      grid.appendChild(c);
+    });
+  });
+}
+
+function updateChar(){
+  const n=document.getElementById('text-input').value.length;
+  const el=document.getElementById('char-badge');
+  el.textContent=n.toLocaleString()+' / 50,000';
+  el.className='char-badge'+(n>50000?' over':n>40000?' near':'');
+}
+
+function updateSliders(){
+  const r=parseInt(document.getElementById('rate').value);
+  const p=parseInt(document.getElementById('pitch').value);
+  document.getElementById('rate-val').textContent=r===0?'Normal':(r>0?'+':'')+r+'%';
+  document.getElementById('pitch-val').textContent=p===0?'Normal':(p>0?'+':'')+p+'Hz';
+}
+
+function setStatus(type,icon,msg){
+  const el=document.getElementById('status');
+  el.className='status'+(type?' '+type:'');
+  el.innerHTML=`<span>${icon}</span><span>${msg}</span>`;
+}
+
+async function generate(){
+  const text=document.getElementById('text-input').value.trim();
+  if(!text){setStatus('error','⚠️','Pehle text likhen!');return;}
+  if(text.length>50000){setStatus('error','⚠️','Text bohot lamba hai!');return;}
+  const r=parseInt(document.getElementById('rate').value);
+  const p=parseInt(document.getElementById('pitch').value);
+  const btn=document.getElementById('gen-btn');
+  btn.disabled=true;
+  document.getElementById('btn-icon').textContent='⏳';
+  document.getElementById('btn-text').textContent='Generating...';
+  document.getElementById('prog-wrap').classList.add('show');
+  document.getElementById('prog-fill').style.width='0%';
+  document.getElementById('dl-card').classList.remove('show');
+  setStatus('generating','🔄','Voice generate ho rahi hai...');
+  let prog=0;
+  const pi=setInterval(()=>{prog=Math.min(prog+Math.random()*8,88);document.getElementById('prog-fill').style.width=prog+'%';},300);
+  try{
+    const res=await fetch('/api/generate',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text,voice:selVoice,rate:(r>=0?'+':'')+r+'%',pitch:(p>=0?'+':'')+p+'Hz'})});
+    clearInterval(pi);
+    document.getElementById('prog-fill').style.width='100%';
+    const data=await res.json();
+    if(!res.ok||data.error)throw new Error(data.error||'Error');
+    const sz=data.size>1048576?(data.size/1048576).toFixed(1)+' MB':(data.size/1024).toFixed(0)+' KB';
+    document.getElementById('dl-size').textContent=sz+' · MP3';
+    document.getElementById('dl-link').href=data.download_url;
+    document.getElementById('audio-player').src=data.download_url;
+    document.getElementById('dl-card').classList.add('show');
+    setStatus('success','✅','MP3 ready! Sunein ya download karein.');
+    addHist(text,data.download_url);
+  }catch(err){
+    clearInterval(pi);
+    document.getElementById('prog-fill').style.width='0%';
+    setStatus('error','❌',err.message.includes('fetch')?'Server se connection nahi':err.message);
+  }
+  btn.disabled=false;
+  document.getElementById('btn-icon').textContent='🎙';
+  document.getElementById('btn-text').textContent='Generate Voiceover';
+  setTimeout(()=>document.getElementById('prog-wrap').classList.remove('show'),1000);
+}
+
+function addHist(text,url){
+  histArr.unshift({text:text.substring(0,50)+(text.length>50?'...':''),url});
+  if(histArr.length>20)histArr.pop();
+  const list=document.getElementById('history-list');
+  list.innerHTML=histArr.map((h,i)=>`
+    <div class="hist-item">
+      <span class="hist-text">${h.text}</span>
+      <a class="hist-dl" href="${h.url}" download="voiceover_${i+1}.mp3">⬇</a>
+    </div>`).join('');
+}
+</script>
+</body>
+</html>
