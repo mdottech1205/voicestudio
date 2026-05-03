@@ -1,53 +1,52 @@
 import asyncio
 import os
 import uuid
-from flask import Flask, request, jsonify, send_file, send_from_directory
+from flask import Flask, request, jsonify, send_file, send_from_directory, Response
 import edge_tts
 
-# Windows asyncio fix
 if os.name == 'nt':
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
 app = Flask(__name__, static_folder='.')
-OUTPUT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'outputs')
+OUTPUT_DIR = '/tmp/outputs'
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 VOICES = {
     "English (US)": [
-        {"id": "en-US-AriaNeural",       "name": "Aria",        "gender": "Female", "style": "Conversational"},
-        {"id": "en-US-JennyNeural",       "name": "Jenny",       "gender": "Female", "style": "Friendly"},
-        {"id": "en-US-GuyNeural",         "name": "Guy",         "gender": "Male",   "style": "News"},
-        {"id": "en-US-AnaNeural",         "name": "Ana",         "gender": "Female", "style": "Cute"},
-        {"id": "en-US-ChristopherNeural", "name": "Christopher", "gender": "Male",   "style": "Reliable"},
-        {"id": "en-US-EricNeural",        "name": "Eric",        "gender": "Male",   "style": "Rational"},
-        {"id": "en-US-MichelleNeural",    "name": "Michelle",    "gender": "Female", "style": "Friendly"},
-        {"id": "en-US-RogerNeural",       "name": "Roger",       "gender": "Male",   "style": "Lively"},
-        {"id": "en-US-SteffanNeural",     "name": "Steffan",     "gender": "Male",   "style": "Narrative"},
+        {"id": "en-US-AriaNeural","name": "Aria","gender": "Female","style": "Conversational"},
+        {"id": "en-US-JennyNeural","name": "Jenny","gender": "Female","style": "Friendly"},
+        {"id": "en-US-GuyNeural","name": "Guy","gender": "Male","style": "News"},
+        {"id": "en-US-AnaNeural","name": "Ana","gender": "Female","style": "Cute"},
+        {"id": "en-US-ChristopherNeural","name": "Christopher","gender": "Male","style": "Reliable"},
+        {"id": "en-US-EricNeural","name": "Eric","gender": "Male","style": "Rational"},
+        {"id": "en-US-MichelleNeural","name": "Michelle","gender": "Female","style": "Friendly"},
+        {"id": "en-US-RogerNeural","name": "Roger","gender": "Male","style": "Lively"},
+        {"id": "en-US-SteffanNeural","name": "Steffan","gender": "Male","style": "Narrative"},
     ],
     "English (UK)": [
-        {"id": "en-GB-SoniaNeural",  "name": "Sonia",  "gender": "Female", "style": "Bright"},
-        {"id": "en-GB-RyanNeural",   "name": "Ryan",   "gender": "Male",   "style": "Newscast"},
-        {"id": "en-GB-LibbyNeural",  "name": "Libby",  "gender": "Female", "style": "Friendly"},
-        {"id": "en-GB-MaisieNeural", "name": "Maisie", "gender": "Female", "style": "Cheerful"},
-        {"id": "en-GB-ThomasNeural", "name": "Thomas", "gender": "Male",   "style": "Calm"},
+        {"id": "en-GB-SoniaNeural","name": "Sonia","gender": "Female","style": "Bright"},
+        {"id": "en-GB-RyanNeural","name": "Ryan","gender": "Male","style": "Newscast"},
+        {"id": "en-GB-LibbyNeural","name": "Libby","gender": "Female","style": "Friendly"},
+        {"id": "en-GB-MaisieNeural","name": "Maisie","gender": "Female","style": "Cheerful"},
+        {"id": "en-GB-ThomasNeural","name": "Thomas","gender": "Male","style": "Calm"},
     ],
     "English (AU)": [
-        {"id": "en-AU-NatashaNeural", "name": "Natasha", "gender": "Female", "style": "Natural"},
-        {"id": "en-AU-WilliamNeural", "name": "William", "gender": "Male",   "style": "Natural"},
+        {"id": "en-AU-NatashaNeural","name": "Natasha","gender": "Female","style": "Natural"},
+        {"id": "en-AU-WilliamNeural","name": "William","gender": "Male","style": "Natural"},
     ],
     "Urdu (Pakistan)": [
-        {"id": "ur-PK-AsadNeural", "name": "Asad", "gender": "Male",   "style": "Natural"},
-        {"id": "ur-PK-UzmaNeural", "name": "Uzma", "gender": "Female", "style": "Natural"},
+        {"id": "ur-PK-AsadNeural","name": "Asad","gender": "Male","style": "Natural"},
+        {"id": "ur-PK-UzmaNeural","name": "Uzma","gender": "Female","style": "Natural"},
     ],
     "Hindi": [
-        {"id": "hi-IN-SwaraNeural",  "name": "Swara",  "gender": "Female", "style": "Natural"},
-        {"id": "hi-IN-MadhurNeural", "name": "Madhur", "gender": "Male",   "style": "Natural"},
+        {"id": "hi-IN-SwaraNeural","name": "Swara","gender": "Female","style": "Natural"},
+        {"id": "hi-IN-MadhurNeural","name": "Madhur","gender": "Male","style": "Natural"},
     ],
     "Arabic": [
-        {"id": "ar-SA-ZariyahNeural", "name": "Zariyah", "gender": "Female", "style": "Saudi"},
-        {"id": "ar-SA-HamedNeural",   "name": "Hamed",   "gender": "Male",   "style": "Saudi"},
-        {"id": "ar-EG-SalmaNeural",   "name": "Salma",   "gender": "Female", "style": "Egyptian"},
-        {"id": "ar-EG-ShakirNeural",  "name": "Shakir",  "gender": "Male",   "style": "Egyptian"},
+        {"id": "ar-SA-ZariyahNeural","name": "Zariyah","gender": "Female","style": "Saudi"},
+        {"id": "ar-SA-HamedNeural","name": "Hamed","gender": "Male","style": "Saudi"},
+        {"id": "ar-EG-SalmaNeural","name": "Salma","gender": "Female","style": "Egyptian"},
+        {"id": "ar-EG-ShakirNeural","name": "Shakir","gender": "Male","style": "Egyptian"},
     ],
 }
 
@@ -57,11 +56,11 @@ def index():
 
 @app.route('/manifest.json')
 def manifest():
-    return send_from_directory('static', 'manifest.json')
+    return send_from_directory('.', 'manifest.json')
 
 @app.route('/sw.js')
 def sw():
-    return send_from_directory('static', 'sw.js')
+    return send_from_directory('.', 'sw.js')
 
 @app.route('/api/voices')
 def get_voices():
@@ -93,7 +92,7 @@ def generate():
         loop.run_until_complete(_gen())
         loop.close()
     except Exception as e:
-        return jsonify({'error': f'Generation failed: {str(e)}'}), 500
+        return jsonify({'error': str(e)}), 500
 
     if not os.path.exists(filepath) or os.path.getsize(filepath) == 0:
         return jsonify({'error': 'Audio generate nahi hua!'}), 500
