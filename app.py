@@ -8,7 +8,7 @@ import edge_tts
 if os.name == 'nt':
     asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
 
-app = Flask(__name__, static_folder='static')
+app = Flask(__name__, static_folder='.')
 OUTPUT_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'outputs')
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
@@ -53,7 +53,7 @@ VOICES = {
 
 @app.route('/')
 def index():
-    return send_from_directory('static', 'index.html')
+    return send_from_directory('.', 'index.html')
 
 @app.route('/manifest.json')
 def manifest():
