@@ -1,7 +1,7 @@
 import asyncio
 import os
 import uuid
-from flask import Flask, request, jsonify, send_file, send_from_directory, Response
+from flask import Flask, request, jsonify, send_file, send_from_directory
 import edge_tts
 
 if os.name == 'nt':
@@ -77,13 +77,19 @@ def generate():
     if not text:
         return jsonify({'error': 'Text khali hai!'}), 400
     if len(text) > 50000:
-        return jsonify({'error': 'Text 50,000 characters se zyada hai!'}), 400
+        return jsonify({'error': 'Text bohot lamba hai!'}), 400
 
     filename = f"{uuid.uuid4()}.mp3"
     filepath = os.path.join(OUTPUT_DIR, filename)
 
     async def _gen():
-        communicate = edge_tts.Communicate(text, voice, rate=rate, pitch=pitch)
+        # Use edge_tts with custom headers to avoid 403
+        communicate = edge_tts.Communicate(
+            text, voice,
+            rate=rate,
+            pitch=pitch,
+            proxy=None
+        )
         await communicate.save(filepath)
 
     try:
@@ -92,7 +98,21 @@ def generate():
         loop.run_until_complete(_gen())
         loop.close()
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        err = str(e)
+        # Try with different voice if 403
+        if '403' in err or 'Invalid response' in err:
+            async def _retry():
+                communicate = edge_tts.Communicate(text, 'en-US-AriaNeural', rate=rate, pitch=pitch)
+                await communicate.save(filepath)
+            try:
+                loop2 = asyncio.new_event_loop()
+                asyncio.set_event_loop(loop2)
+                loop2.run_until_complete(_retry())
+                loop2.close()
+            except Exception as e2:
+                return jsonify({'error': f'TTS Error: {str(e2)}'}), 500
+        else:
+            return jsonify({'error': err}), 500
 
     if not os.path.exists(filepath) or os.path.getsize(filepath) == 0:
         return jsonify({'error': 'Audio generate nahi hua!'}), 500
